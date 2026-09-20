@@ -1,0 +1,294 @@
+I need you to continue and develop my EXISTING college project.
+
+GitHub repository:
+https://github.com/adithya-10122004/AI-Powered-Insurance-Claimer
+
+Project title:
+AI-Powered Automated Insurance Claim Estimator
+
+I am a 3rd-year AIML engineering student, and this is a college major project.
+
+IMPORTANT:
+Do NOT rebuild the project from scratch.
+Do NOT delete existing functionality.
+Do NOT replace the existing frontend/backend architecture unless absolutely necessary.
+First inspect the repository and understand what is already implemented.
+
+==================================================
+MY CURRENT TARGET
+==================================================
+
+I need to complete the work corresponding to this project-diary entry:
+
+"Worked on vehicle image processing and prepared the image input pipeline for AI-based damage detection. Discussed the use of YOLO for detecting damaged vehicle parts."
+
+Therefore, your immediate goal is to make the existing project reach a clean, working stage where:
+
+Vehicle image
+      ↓
+Frontend image upload
+      ↓
+Backend receives image
+      ↓
+Image validation
+      ↓
+Image preprocessing / preparation
+      ↓
+Processed image is ready for future AI/YOLO damage detection
+
+The project should also have the technical preparation/documentation needed for the next YOLO damage-detection stage.
+
+==================================================
+STEP 1 — INSPECT BEFORE CHANGING ANYTHING
+==================================================
+
+First inspect the complete repository.
+
+Identify:
+
+1. Frontend framework and structure
+2. Backend framework and structure
+3. Existing API endpoints
+4. Existing database, if any
+5. Existing image-related functionality
+6. Existing components/pages
+7. Existing dependencies
+8. Existing README/documentation
+9. What is already working
+10. What is missing for vehicle-image processing
+
+Do NOT make changes during this inspection.
+
+Give me a concise implementation plan first.
+
+==================================================
+STEP 2 — PRESERVE THE EXISTING PROJECT
+==================================================
+
+Before making changes:
+
+- Preserve all existing functionality.
+- Do not delete working files.
+- Do not rewrite the application unnecessarily.
+- Reuse the existing frontend and FastAPI backend.
+- Keep the existing project structure wherever possible.
+- Do not change authentication, database or unrelated functionality unless required.
+- Do not add unnecessary packages.
+
+Work on a separate Git branch if possible:
+
+spandana-image-processing
+
+Do not modify the main branch directly.
+
+==================================================
+STEP 3 — IMPLEMENT VEHICLE IMAGE INPUT
+==================================================
+
+Implement a proper vehicle-image upload workflow.
+
+Frontend requirements:
+
+- Add a clear vehicle image upload interface.
+- Allow JPG, JPEG and PNG.
+- Show the selected image before uploading.
+- Show an upload/loading state.
+- Show a success message after upload.
+- Show a useful error message if upload fails.
+- Keep the UI consistent with the existing project.
+
+Backend requirements:
+
+- Create or extend an appropriate image-upload API.
+- Accept multipart image uploads.
+- Validate that the uploaded file is an image.
+- Validate supported extensions/types.
+- Add a reasonable file-size limit.
+- Generate a safe unique filename.
+- Do not overwrite existing uploaded images.
+- Preserve the original image.
+- Return a useful JSON response.
+- Handle invalid files gracefully.
+
+==================================================
+STEP 4 — IMAGE PROCESSING PIPELINE
+==================================================
+
+Prepare the uploaded vehicle image for future AI damage detection.
+
+Implement a clean preprocessing pipeline.
+
+The pipeline should be conceptually:
+
+Original vehicle image
+        ↓
+Image validation
+        ↓
+Read image
+        ↓
+Resize/normalize as appropriate
+        ↓
+Prepare processed image
+        ↓
+Ready for YOLO inference
+
+Important:
+
+Do not unnecessarily destroy the original image.
+
+Keep the original image separate from the processed image.
+
+Use appropriate preprocessing for a future computer-vision/YOLO pipeline.
+
+If the existing project already has image-processing utilities, reuse them instead of creating duplicate functionality.
+
+==================================================
+STEP 5 — YOLO PREPARATION
+==================================================
+
+At this stage I DO NOT want you to falsely claim that a YOLO model has been trained.
+
+Prepare the project architecture so that a YOLO damage-detection model can be integrated next.
+
+Create a clean place/interface for future YOLO inference.
+
+For example, the architecture should eventually allow:
+
+processed vehicle image
+        ↓
+YOLO model
+        ↓
+damaged vehicle part
+        ↓
+bounding box
+        ↓
+confidence score
+        ↓
+damage information
+
+For now, the important thing is that the image-processing pipeline is ready to pass an image to a future YOLO model.
+
+If appropriate, create a clearly marked placeholder/service interface for YOLO rather than pretending that a trained model exists.
+
+==================================================
+STEP 6 — YOLO DAMAGE DETECTION DISCUSSION
+==================================================
+
+Add suitable documentation explaining the planned YOLO stage.
+
+Discuss:
+
+- Why YOLO is suitable for vehicle-damage detection.
+- What vehicle parts/damage classes could be detected.
+- What type of dataset/annotations will be required.
+- How bounding boxes will represent damaged regions.
+- How confidence scores will be used.
+- How YOLO output will later be connected to damage severity and insurance estimation.
+
+Do not fabricate model accuracy, dataset results, or training results.
+
+Clearly distinguish:
+CURRENTLY IMPLEMENTED
+from
+PLANNED/FUTURE WORK.
+
+==================================================
+STEP 7 — TEST EVERYTHING
+==================================================
+
+After implementation, actually run and test the application.
+
+Test at minimum:
+
+1. Valid JPG vehicle image
+2. Valid JPEG vehicle image
+3. Valid PNG vehicle image
+4. Invalid file type
+5. Missing file
+6. Oversized file if size validation is implemented
+7. Frontend upload
+8. Backend API
+9. Image preprocessing
+10. Error handling
+
+Fix any errors you encounter.
+
+Do not stop after merely writing code.
+
+==================================================
+STEP 8 — VERIFY THE APPLICATION
+==================================================
+
+Make sure the final workflow works:
+
+Frontend
+   ↓
+Select vehicle image
+   ↓
+Preview image
+   ↓
+Upload
+   ↓
+Backend API
+   ↓
+Validate image
+   ↓
+Preprocess image
+   ↓
+Return successful response
+   ↓
+Image is ready for future YOLO detection
+
+Tell me:
+
+- Backend localhost URL
+- Frontend localhost URL
+- Image-upload API endpoint
+- Commands needed to start the backend
+- Commands needed to start the frontend
+- Files you created
+- Files you modified
+- Packages you installed
+- Tests you performed
+- Any remaining limitations
+
+==================================================
+STEP 9 — IMPORTANT COLLEGE PROJECT REQUIREMENT
+==================================================
+
+The final implementation must genuinely support this diary statement:
+
+"Worked on vehicle image processing and prepared the image input pipeline for AI-based damage detection. Discussed the use of YOLO for detecting damaged vehicle parts."
+
+Do not create fake output just to make the project look complete.
+
+Do not claim YOLO damage detection is working unless an actual YOLO model is installed, configured, and successfully tested.
+
+At the end, give me a simple explanation in student-friendly language of what I can tell my project guide:
+
+1. What I implemented
+2. How the image pipeline works
+3. Why YOLO is being considered
+4. What the next development step will be
+
+==================================================
+FINAL RULES
+==================================================
+
+- Do not rebuild from scratch.
+- Do not delete existing working features.
+- Do not modify unrelated functionality.
+- Do not fabricate AI results.
+- Do not fabricate accuracy.
+- Do not fabricate datasets.
+- Do not claim YOLO is trained if it isn't.
+- Keep code understandable for a 3rd-year AIML student.
+- Use comments where useful.
+- Keep the implementation clean and modular.
+- Run the application and test your changes.
+- Fix errors before finishing.
+- Keep the main branch safe.
+- Prefer a separate branch named:
+  spandana-image-processing
+
+Start by inspecting the repository and give me the implementation plan BEFORE making changes.
