@@ -1343,3 +1343,35 @@ footer {
   .result-summary { grid-template-columns: 1fr; }
   .damage-result-bottom { align-items: flex-start; flex-direction: column; gap: 5px; }
 }
+
+/* =========================================
+   REPAIR ESTIMATION
+========================================= */
+
+.repair-estimate-card {
+  margin-top: 22px;
+  padding: 25px;
+  border: 1px solid #2e2e2e;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #151515, #0d0d0d);
+}
+
+.estimate-heading, .estimate-breakdown > div, .repair-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.estimate-heading strong { display: block; margin-top: 8px; font-size: 30px; }
+.estimate-note { color: #777; font-size: 11px; }
+.estimate-breakdown { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px; }
+.estimate-breakdown > div { padding-top: 15px; border-top: 1px solid #242424; color: #777; font-size: 12px; }
+.estimate-breakdown strong { color: #ddd; font-size: 14px; font-weight: 500; }
+.repair-line { margin-top: 10px; padding-top: 10px; border-top: 1px solid #1f1f1f; color: #555; font-size: 10px; }
+.repair-line strong { color: #aaa; font-size: 12px; font-weight: 500; }
+
+@media (max-width: 600px) {
+  .estimate-breakdown { grid-template-columns: 1fr; }
+  .estimate-heading { align-items: flex-start; flex-direction: column; }
+}

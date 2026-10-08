@@ -10,6 +10,7 @@ function ClaimReview() {
   const navigate = useNavigate();
   const claim = JSON.parse(localStorage.getItem("claimData") || "{}");
   const analysis = claim.analysis;
+  const money = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
   if (!analysis) {
     return (
@@ -53,13 +54,25 @@ function ClaimReview() {
           <div><small>DECISION RULE</small><strong>Highest severity</strong></div>
         </section>
 
+        <section className="repair-estimate-card">
+          <div className="estimate-heading">
+            <div><span className="result-label">ESTIMATED REPAIR COST</span><strong>{money(analysis.repair_estimate?.total_cost)}</strong></div>
+            <span className="estimate-note">Parts + labour</span>
+          </div>
+          <div className="estimate-breakdown">
+            <div><span>Replacement / repair parts</span><strong>{money(analysis.repair_estimate?.parts_cost)}</strong></div>
+            <div><span>Labour</span><strong>{money(analysis.repair_estimate?.labour_cost)}</strong></div>
+          </div>
+        </section>
+
         <h2 className="results-title">Detected damage by image</h2>
         <div className="damage-results">
           {analysis.results.map((result) => (
             <article className="damage-result" key={result.filename}>
               <div className="damage-result-top"><strong>{result.filename}</strong><span className={`severity-pill severity-${result.severity}`}>{severityLabels[result.severity]}</span></div>
               <div className="result-meter"><span style={{ width: `${Math.round(result.damage_score * 100)}%` }} /></div>
-              <div className="damage-result-bottom"><span>Potential damaged vehicle panel</span><strong>{Math.round(result.damage_score * 100)}% score</strong></div>
+              <div className="damage-result-bottom"><span>{result.repair_estimate?.part || result.detections?.[0]?.part || "Vehicle panel"}</span><strong>{Math.round(result.damage_score * 100)}% score</strong></div>
+              <div className="repair-line"><span>Parts {money(result.repair_estimate?.parts_cost)} + labour {money(result.repair_estimate?.labour_cost)}</span><strong>{money(result.repair_estimate?.total_cost)}</strong></div>
             </article>
           ))}
         </div>

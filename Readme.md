@@ -40,3 +40,15 @@ Open `http://localhost:5173`, start a claim, complete the vehicle and accident f
 - `POST /api/analyze-claim` — multipart request with repeated `files` fields
 
 The analysis response contains `overall_severity`, `overall_score`, `average_score`, and per-image `results` with a normalized bounding box, confidence, severity, and visual signals.
+
+## Repair estimation
+
+Each detected region is mapped to a likely part for the prototype (front bumper, hood, fender, door panel, or body panel). The estimator then applies severity multipliers to the base catalog:
+
+| Severity | Parts multiplier | Labour multiplier |
+|---|---:|---:|
+| Minor | 35% | 50% |
+| Moderate | 70% | 85% |
+| Severe | 100% | 130% |
+
+The review page shows per-image parts cost, labour cost, and total cost, plus a combined estimate in INR. The catalog and multipliers are defined in `backend/main.py` and should be replaced with local workshop/insurer rates for a real deployment.
