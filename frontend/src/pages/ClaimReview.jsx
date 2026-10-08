@@ -51,7 +51,7 @@ function ClaimReview() {
         <section className="result-summary">
           <div><small>IMAGES ANALYZED</small><strong>{analysis.images_analyzed}</strong></div>
           <div><small>AVERAGE SCORE</small><strong>{Math.round(analysis.average_score * 100)}%</strong></div>
-          <div><small>DECISION RULE</small><strong>Highest severity</strong></div>
+          <div><small>DAMAGED PARTS</small><strong>{analysis.repair_estimate?.unique_parts?.length || 1}</strong></div>
         </section>
 
         <section className="repair-estimate-card">
@@ -63,6 +63,9 @@ function ClaimReview() {
             <div><span>Replacement / repair parts</span><strong>{money(analysis.repair_estimate?.parts_cost)}</strong></div>
             <div><span>Labour</span><strong>{money(analysis.repair_estimate?.labour_cost)}</strong></div>
           </div>
+          {analysis.repair_estimate?.unique_parts?.length > 0 && (
+            <div className="estimate-parts">{analysis.repair_estimate.unique_parts.map((item) => `${item.part} (${severityLabels[item.severity]})`).join(" • ")}</div>
+          )}
         </section>
 
         <h2 className="results-title">Detected damage by image</h2>

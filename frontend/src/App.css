@@ -1375,3 +1375,5 @@ footer {
   .estimate-breakdown { grid-template-columns: 1fr; }
   .estimate-heading { align-items: flex-start; flex-direction: column; }
 }
+
+.estimate-parts { margin-top: 16px; color: #777; font-size: 11px; line-height: 1.6; text-transform: capitalize; }

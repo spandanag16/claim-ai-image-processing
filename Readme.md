@@ -52,3 +52,15 @@ Each detected region is mapped to a likely part for the prototype (front bumper,
 | Severe | 100% | 130% |
 
 The review page shows per-image parts cost, labour cost, and total cost, plus a combined estimate in INR. The catalog and multipliers are defined in `backend/main.py` and should be replaced with local workshop/insurer rates for a real deployment.
+
+## Integrated workflow
+
+1. Vehicle details and accident details are captured in the claim flow and retained in browser storage.
+2. The image-upload step validates and previews 2–8 vehicle images.
+3. `POST /api/analyze-claim` validates the files and runs the baseline damage detector.
+4. Each image receives a damaged-part label, normalized damage score, severity, and repair estimate.
+5. Overall severity is the highest severity across all images.
+6. Repair costs are consolidated by unique damaged part; multiple photos of the same part do not multiply the final estimate.
+7. The review screen displays per-image detections, overall severity, unique damaged parts, parts cost, labour cost, and total INR estimate.
+
+For local verification, the frontend build/lint and the backend multipart workflow should both pass before presenting the project.

@@ -48,6 +48,8 @@ SEVERITY_MULTIPLIERS = {
     "severe": {"parts": 1.00, "labour": 1.30},
 }
 
+SEVERITY_RANK = {"minor": 1, "moderate": 2, "severe": 3}
+
 
 def classify_severity(score: float) -> str:
     """Map a normalized visual-damage score to the three project classes."""
@@ -190,11 +192,22 @@ async def analyze_claim(files: Annotated[list[UploadFile], File(...)]):
     worst = max(results, key=lambda result: result["damage_score"])
     overall = worst["severity"]
     average_score = round(sum(item["damage_score"] for item in results) / len(results), 3)
+    # Multiple photos can show the same part. Consolidate by part so the
+    # estimate represents one repair job rather than charging per photograph.
+    unique_parts = {}
+    for item in results:
+        estimate = item["repair_estimate"]
+        part = estimate["part"]
+        current = unique_parts.get(part)
+        if current is None or SEVERITY_RANK[estimate["severity"]] > SEVERITY_RANK[current["severity"]]:
+            unique_parts[part] = estimate
+
     total_repair_estimate = {
-        "parts_cost": sum(item["repair_estimate"]["parts_cost"] for item in results),
-        "labour_cost": sum(item["repair_estimate"]["labour_cost"] for item in results),
-        "total_cost": sum(item["repair_estimate"]["total_cost"] for item in results),
+        "parts_cost": sum(item["parts_cost"] for item in unique_parts.values()),
+        "labour_cost": sum(item["labour_cost"] for item in unique_parts.values()),
+        "total_cost": sum(item["total_cost"] for item in unique_parts.values()),
         "currency": "INR",
+        "unique_parts": list(unique_parts.values()),
     }
 
     return {
