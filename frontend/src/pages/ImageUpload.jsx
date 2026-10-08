@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import API from "../../api";
 
 function ImageUpload() {
 
@@ -8,6 +9,7 @@ function ImageUpload() {
 
   const [images, setImages] = useState([]);
   const [error, setError] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const MAX_IMAGES = 8;
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -164,81 +166,42 @@ function ImageUpload() {
   // CONTINUE
   // =========================
 
-  const handleContinue = () => {
-
+  const handleContinue = async () => {
     setError("");
 
     if (images.length < 2) {
-
-      setError(
-        "Please upload at least 2 images of the vehicle."
-      );
-
+      setError("Please upload at least 2 images of the vehicle.");
       return;
     }
 
+    const formData = new FormData();
+    images.forEach((image) => formData.append("files", image.file));
+    setIsAnalyzing(true);
 
-    /*
-      Save basic image information.
+    try {
+      const { data: analysis } = await API.post("/api/analyze-claim", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-      We don't store the actual image files
-      in localStorage because browser storage
-      is not designed for large files.
-
-      Actual files will later be uploaded
-      to our FastAPI backend.
-    */
-
-    const existingClaim =
-      JSON.parse(
-        localStorage.getItem("claimData")
-      ) || {};
-
-
-    const imageInformation =
-      images.map((image) => ({
+      const existingClaim = JSON.parse(localStorage.getItem("claimData")) || {};
+      const imageInformation = images.map((image) => ({
         name: image.name,
         size: image.size,
       }));
+      const updatedClaim = {
+        ...existingClaim,
+        images: imageInformation,
+        analysis,
+      };
 
-
-    const updatedClaim = {
-
-      ...existingClaim,
-
-      images: imageInformation,
-
-    };
-
-
-    localStorage.setItem(
-      "claimData",
-      JSON.stringify(updatedClaim)
-    );
-
-
-    console.log(
-      "Claim ready for AI analysis:",
-      updatedClaim
-    );
-
-
-    /*
-      Temporary navigation.
-
-      Later this page will call:
-      
-      FastAPI
-        ↓
-      YOLO
-        ↓
-      Damage Detection
-    */
-
-    navigate("/claim/review");
-
+      localStorage.setItem("claimData", JSON.stringify(updatedClaim));
+      navigate("/claim/review");
+    } catch (requestError) {
+      setError(requestError.response?.data?.detail || "Analysis failed. Make sure the backend is running and try again.");
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
-
 
   return (
 
@@ -580,9 +543,10 @@ function ImageUpload() {
             type="button"
             className="primary-btn"
             onClick={handleContinue}
+            disabled={isAnalyzing}
           >
 
-            Continue to Review
+            {isAnalyzing ? "Analyzing images..." : "Continue to Review"}
 
             <span>
               →

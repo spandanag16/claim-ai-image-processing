@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import NewClaim from "./pages/NewClaim";
 import AccidentDetails from "./pages/AccidentDetails";
 import ImageUpload from "./pages/ImageUpload";
+import ClaimReview from "./pages/ClaimReview";
 
 import "./App.css";
 
@@ -34,6 +35,11 @@ function App() {
         <Route
           path="/new-claim/images"
           element={<ImageUpload />}
+        />
+
+        <Route
+          path="/claim/review"
+          element={<ClaimReview />}
         />
 
       </Routes>
