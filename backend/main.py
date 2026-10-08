@@ -50,6 +50,14 @@ SEVERITY_MULTIPLIERS = {
 
 SEVERITY_RANK = {"minor": 1, "moderate": 2, "severe": 3}
 
+RECOMMENDATIONS = {
+    "scratch": "Paint repair",
+    "dent": "Paintless Dent Repair (PDR)",
+    "crack": "Component repair or replacement",
+    "broken component": "Component replacement",
+    "deformation": "Professional inspection",
+}
+
 
 def classify_severity(score: float) -> str:
     """Map a normalized visual-damage score to the three project classes."""
@@ -95,6 +103,19 @@ def estimate_repair(part: str, severity: str) -> dict:
     }
 
 
+def classify_damage_type(severity: str, edge_signal: float, texture_signal: float) -> str:
+    """Classify a visible damage type using explainable baseline signals."""
+    if severity == "severe" and texture_signal >= 0.65:
+        return "deformation"
+    if severity == "severe" and edge_signal >= 0.20:
+        return "broken component"
+    if edge_signal >= 0.18 and texture_signal >= 0.45:
+        return "crack"
+    if severity == "moderate":
+        return "dent"
+    return "scratch"
+
+
 def analyze_image(image: Image.Image) -> dict:
     """Return explainable baseline detections for one image.
 
@@ -135,6 +156,7 @@ def analyze_image(image: Image.Image) -> dict:
     damage_score = round(float(np.clip(0.55 * local_score + 0.30 * edge_signal + 0.15 * texture_signal, 0.0, 1.0)), 3)
     severity = classify_severity(damage_score)
     part = infer_part(x1, y1, x2, y2)
+    damage_type = classify_damage_type(severity, edge_signal, texture_signal)
     repair_estimate = estimate_repair(part, severity)
 
     return {
@@ -144,6 +166,8 @@ def analyze_image(image: Image.Image) -> dict:
             {
                 "label": "potential damaged vehicle panel",
                 "part": part,
+                "damage_type": damage_type,
+                "recommendation": RECOMMENDATIONS[damage_type],
                 "confidence": round(max(0.5, damage_score), 3),
                 "severity": severity,
                 "bbox": [round(x1, 3), round(y1, 3), round(x2, 3), round(y2, 3)],
@@ -154,6 +178,8 @@ def analyze_image(image: Image.Image) -> dict:
             "texture_signal": round(texture_signal, 3),
         },
         "repair_estimate": repair_estimate,
+        "damage_type": damage_type,
+        "recommendation": RECOMMENDATIONS[damage_type],
     }
 
 

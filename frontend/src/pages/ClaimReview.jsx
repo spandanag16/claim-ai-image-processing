@@ -11,6 +11,21 @@ function ClaimReview() {
   const claim = JSON.parse(localStorage.getItem("claimData") || "{}");
   const analysis = claim.analysis;
   const money = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
+  const downloadReport = () => {
+    const report = {
+      generated_at: new Date().toISOString(),
+      vehicle: claim.vehicle || null,
+      accident: claim.accident || null,
+      analysis,
+    };
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "claimai-assessment-report.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (!analysis) {
     return (
@@ -75,13 +90,14 @@ function ClaimReview() {
               <div className="damage-result-top"><strong>{result.filename}</strong><span className={`severity-pill severity-${result.severity}`}>{severityLabels[result.severity]}</span></div>
               <div className="result-meter"><span style={{ width: `${Math.round(result.damage_score * 100)}%` }} /></div>
               <div className="damage-result-bottom"><span>{result.repair_estimate?.part || result.detections?.[0]?.part || "Vehicle panel"}</span><strong>{Math.round(result.damage_score * 100)}% score</strong></div>
+              <div className="damage-meta"><span>Type: <strong>{result.damage_type || "Damage"}</strong></span><span>Recommendation: <strong>{result.recommendation || "Inspection"}</strong></span></div>
               <div className="repair-line"><span>Parts {money(result.repair_estimate?.parts_cost)} + labour {money(result.repair_estimate?.labour_cost)}</span><strong>{money(result.repair_estimate?.total_cost)}</strong></div>
             </article>
           ))}
         </div>
 
         <div className="review-disclaimer">{analysis.disclaimer}</div>
-        <div className="form-footer"><span>Prototype assessment complete</span><button className="secondary-btn" onClick={() => navigate("/")}>Finish</button></div>
+        <div className="form-footer"><span>Assessment report ready</span><div className="review-actions"><button className="secondary-btn" onClick={downloadReport}>Download report</button><button className="secondary-btn" onClick={() => navigate("/")}>Finish</button></div></div>
       </main>
     </div>
   );

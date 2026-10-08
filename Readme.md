@@ -64,3 +64,7 @@ The review page shows per-image parts cost, labour cost, and total cost, plus a 
 7. The review screen displays per-image detections, overall severity, unique damaged parts, parts cost, labour cost, and total INR estimate.
 
 For local verification, the frontend build/lint and the backend multipart workflow should both pass before presenting the project.
+
+## Damage type, recommendation, and report
+
+The integrated review now also classifies the baseline visual signal as scratch, dent, crack, broken component, or deformation. Each type maps to a repair recommendation such as paint repair, PDR, component replacement, or professional inspection. The user can download a JSON claim assessment report containing vehicle details, accident details, detections, severity, recommendations, and the itemized repair estimate.

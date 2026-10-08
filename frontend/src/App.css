@@ -1377,3 +1377,11 @@ footer {
 }
 
 .estimate-parts { margin-top: 16px; color: #777; font-size: 11px; line-height: 1.6; text-transform: capitalize; }
+
+.damage-meta { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; color: #666; font-size: 11px; }
+.damage-meta strong { color: #aaa; font-weight: 500; text-transform: capitalize; }
+.review-actions { display: flex; gap: 10px; }
+
+@media (max-width: 600px) {
+  .review-actions { align-items: stretch; flex-direction: column; width: 100%; }
+}
