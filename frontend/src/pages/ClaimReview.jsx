@@ -33,7 +33,7 @@ function ClaimReview() {
         <main className="claim-container empty-review">
           <div className="badge">NO ANALYSIS FOUND</div>
           <h1>Start with vehicle images</h1>
-          <p>Upload at least two images before opening the review.</p>
+          <p>Upload at least one image before opening the review.</p>
           <button className="primary-btn" onClick={() => navigate("/new-claim/images")}>Go to image upload <span>→</span></button>
         </main>
       </div>

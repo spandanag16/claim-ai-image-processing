@@ -32,7 +32,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`, start a claim, complete the vehicle and accident forms, upload at least two images, and select **Continue to Review**.
+Open `http://localhost:5173`, start a claim, complete the vehicle and accident forms, upload at least one image, and select **Continue to Review**.
 
 ## API
 

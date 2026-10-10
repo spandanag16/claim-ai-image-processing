@@ -195,9 +195,9 @@ def health():
 
 @app.post("/api/analyze-claim")
 async def analyze_claim(files: Annotated[list[UploadFile], File(...)]):
-    """Analyze 2–8 vehicle images and return per-image and overall severity."""
-    if not 2 <= len(files) <= MAX_IMAGES:
-        raise HTTPException(status_code=400, detail=f"Upload between 2 and {MAX_IMAGES} images.")
+    """Analyze 1–8 vehicle images and return per-image and overall severity."""
+    if not 1 <= len(files) <= MAX_IMAGES:
+        raise HTTPException(status_code=400, detail=f"Upload between 1 and {MAX_IMAGES} images.")
 
     results = []
     for file in files:

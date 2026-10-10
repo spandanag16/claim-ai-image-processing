@@ -169,8 +169,8 @@ function ImageUpload() {
   const handleContinue = async () => {
     setError("");
 
-    if (images.length < 2) {
-      setError("Please upload at least 2 images of the vehicle.");
+    if (images.length < 1) {
+      setError("Please upload at least 1 image of the vehicle.");
       return;
     }
 
@@ -532,7 +532,7 @@ function ImageUpload() {
 
           <span>
             {images.length === 0
-              ? "Upload at least 2 images to continue"
+              ? "Upload at least 1 image to continue"
               : `${images.length} image${
                   images.length > 1 ? "s" : ""
                 } ready for analysis`}
