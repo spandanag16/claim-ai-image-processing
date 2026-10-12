@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../../api";
+import API from "../api";
 
 const MAX_IMAGES = 8;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;

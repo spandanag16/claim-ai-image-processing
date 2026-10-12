@@ -14,6 +14,13 @@ from uuid import uuid4
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+try:
+    import cv2
+    import numpy as np
+except ImportError:  # OpenCV is optional; the pipeline falls back to PIL output.
+    cv2 = None
+    np = None
+
 
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 SUPPORTED_CONTENT_TYPES = {"image/jpeg", "image/png"}
@@ -29,11 +36,43 @@ class PreparedImage:
     original_filename: str
     original_path: Path
     processed_path: Path
+    ai_ready_path: Path | None
     original_width: int
     original_height: int
     processed_width: int
     processed_height: int
     original_size_bytes: int
+
+
+def cv_refine_image(padded_path: Path, ai_ready_path: Path) -> bool:
+    """Synopsis §4.2 stage: OpenCV noise reduction + normalization.
+
+    Operates on the already-padded 640x640 image and writes a separate
+    AI-ready file so the YOLO-format padded image stays untouched.
+    """
+    if cv2 is None:
+        return False
+
+    image = cv2.imread(str(padded_path), cv2.IMREAD_COLOR)
+    if image is None:
+        return False
+
+    # Edge-preserving noise reduction.
+    denoised = cv2.fastNlMeansDenoisingColored(image, None, h=7, hColor=7,
+                                                templateWindowSize=7, searchWindowSize=21)
+    denoised = cv2.bilateralFilter(denoised, d=5, sigmaColor=40, sigmaSpace=40)
+
+    # Normalize contrast per channel (CLAHE in LAB space keeps colour stable).
+    lab = cv2.cvtColor(denoised, cv2.COLOR_BGR2LAB)
+    l_channel, a_channel, b_channel = cv2.split(lab)
+    l_channel = cv2.normalize(l_channel, None, 0, 255, cv2.NORM_MINMAX)
+    l_channel = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(l_channel)
+    normalized = cv2.cvtColor(cv2.merge((l_channel, a_channel, b_channel)), cv2.COLOR_LAB2BGR)
+
+    # Final 0-1 float normalization is what a model tensor would use; the
+    # stored JPEG keeps the uint8 form for inspection and classic-CV analysis.
+    success = cv2.imwrite(str(ai_ready_path), normalized)
+    return bool(success)
 
 
 def _safe_extension(filename: str) -> str:
@@ -75,11 +114,14 @@ def prepare_vehicle_image(
     upload_id = uuid4().hex
     original_dir = upload_root / "original"
     processed_dir = upload_root / "processed"
+    ai_ready_dir = upload_root / "ai_ready"
     original_dir.mkdir(parents=True, exist_ok=True)
     processed_dir.mkdir(parents=True, exist_ok=True)
+    ai_ready_dir.mkdir(parents=True, exist_ok=True)
 
     original_path = original_dir / f"{upload_id}{extension}"
     processed_path = processed_dir / f"{upload_id}.jpg"
+    ai_ready_path = ai_ready_dir / f"{upload_id}.jpg"
     original_path.write_bytes(content)
 
     try:
@@ -93,9 +135,11 @@ def prepare_vehicle_image(
                 centering=(0.5, 0.5),
             )
             prepared.save(processed_path, format="JPEG", quality=92, optimize=True)
+        cv_applied = cv_refine_image(processed_path, ai_ready_path)
     except (UnidentifiedImageError, OSError) as exc:
         original_path.unlink(missing_ok=True)
         processed_path.unlink(missing_ok=True)
+        ai_ready_path.unlink(missing_ok=True)
         raise ValueError("The uploaded image could not be prepared.") from exc
 
     return PreparedImage(
@@ -103,12 +147,49 @@ def prepare_vehicle_image(
         original_filename=Path(filename).name,
         original_path=original_path,
         processed_path=processed_path,
+        ai_ready_path=ai_ready_path if cv_applied else None,
         original_width=width,
         original_height=height,
         processed_width=YOLO_INPUT_SIZE[0],
         processed_height=YOLO_INPUT_SIZE[1],
         original_size_bytes=len(content),
     )
+
+
+def model_status() -> dict[str, object]:
+    """Honest report of the damage-detection stage.
+
+    A fine-tuned YOLO model can be enabled with CLAIMAI_YOLO_MODEL=path/to.pt.
+    Until then detection runs on classical OpenCV heuristics, which is stated
+    explicitly instead of pretending a trained model exists.
+    """
+    import os
+
+    model_path = os.environ.get("CLAIMAI_YOLO_MODEL", "")
+    if model_path and Path(model_path).exists():
+        try:
+            from ultralytics import YOLO  # optional dependency
+
+            YOLO(model_path)
+            return {
+                "status": "yolo_configured",
+                "model": model_path,
+                "message": "Fine-tuned YOLO model loaded for damage detection.",
+            }
+        except Exception as exc:  # ultralytics missing or model unusable
+            return {
+                "status": "yolo_error",
+                "model": model_path,
+                "message": f"YOLO model could not be loaded: {exc}",
+            }
+    return {
+        "status": "cv_fallback",
+        "model": None,
+        "message": (
+            "No trained YOLO damage model is configured; classical OpenCV "
+            "heuristics analyze the image and report damage-suspect regions."
+        ),
+    }
 
 
 def yolo_inference_status() -> dict[str, object]:

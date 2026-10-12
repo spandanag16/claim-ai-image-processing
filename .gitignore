@@ -5,6 +5,7 @@ __pycache__/
 node_modules/
 dist/
 backend/uploads/
+backend/claimai.db
 .DS_Store
 .env
 

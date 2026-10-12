@@ -79,7 +79,61 @@ def test_oversized_file_is_rejected(tmp_path: Path, monkeypatch):
     assert response.status_code == 413
 
 
-def test_yolo_status_is_explicitly_not_configured():
+def test_yolo_status_reports_real_engine():
     response = client.get("/api/yolo/status")
     assert response.status_code == 200
-    assert response.json()["status"] == "not_configured"
+    payload = response.json()
+    assert payload["status"] in {"cv_fallback", "yolo_configured"}
+    assert payload["detections"] == []
+
+
+def test_full_analysis_pipeline(tmp_path: Path, monkeypatch):
+    import io
+    import numpy as np
+    import cv2
+
+    monkeypatch.setattr("main.UPLOAD_ROOT", tmp_path / "uploads")
+
+    # Synthetic damaged-vehicle-style image: base + bright scratch band + dark blob.
+    frame = np.full((480, 800, 3), 90, np.uint8)
+    frame[100:400, 80:720] = (60, 70, 130)
+    cv2.line(frame, (150, 180), (620, 210), (240, 240, 240), 6)
+    cv2.circle(frame, (400, 320), 60, (20, 20, 30), -1)
+    buffer = io.BytesIO()
+    Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)).save(buffer, format="JPEG")
+
+    upload = client.post(
+        "/api/images/upload",
+        files={"file": ("damaged.jpg", buffer.getvalue(), "image/jpeg")},
+    )
+    assert upload.status_code == 200
+    payload = upload.json()
+    assert payload["ai_ready_image"] is not None
+    assert (tmp_path / "uploads" / "ai_ready" / f"{payload['upload_id']}.jpg").exists()
+
+    response = client.post(
+        "/api/analysis/run",
+        json={
+            "claim_id": "CLAIM-TEST-1",
+            "upload_ids": [payload["upload_id"]],
+            "vehicle": {"manufacturer": "Hyundai", "model": "i20"},
+            "accident": {"type": "Minor collision"},
+        },
+    )
+    assert response.status_code == 200
+    report = response.json()["report"]
+    assert 0 <= report["severity"]["score"] <= 100
+    assert report["severity"]["severity"] in {"Minor", "Moderate", "Severe"}
+    assert report["cost_estimate"]["estimated_repair_cost"] >= 0
+    assert report["repair_recommendations"]
+    assert report["claim_decision_support"]
+    assert report["model_transparency"]["engines_used"]
+
+    stored = client.get("/api/claims/CLAIM-TEST-1/report")
+    assert stored.status_code == 200
+    assert stored.json()["report"]["report_id"] == report["report_id"]
+
+
+def test_analysis_rejects_unknown_upload():
+    response = client.post("/api/analysis/run", json={"upload_ids": ["missing-id"]})
+    assert response.status_code == 404

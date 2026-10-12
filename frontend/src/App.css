@@ -1376,3 +1376,33 @@ footer {
     flex-direction: column;
   }
 }
+
+/* =========================
+   CLAIM REPORT
+========================= */
+
+.report-wrapper { display: grid; gap: 20px; }
+
+.severity-banner {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 20px 24px; border-radius: 14px; border: 1px solid #2a2a2a; background: #111;
+}
+.severity-banner .severity-label { display: block; font-size: 22px; font-weight: 800; }
+.severity-banner .severity-score { color: #9a9a9a; font-size: 13px; }
+.severity-cost { text-align: right; }
+.severity-cost span { display: block; color: #9a9a9a; font-size: 12px; }
+.severity-cost strong { font-size: 24px; color: #f2cd87; }
+.severity-minor { border-color: #2f5d3a; } .severity-minor .severity-label { color: #6fd08c; }
+.severity-moderate { border-color: #6b5a24; } .severity-moderate .severity-label { color: #e8c95a; }
+.severity-severe { border-color: #6e2a2a; } .severity-severe .severity-label { color: #f27d7d; }
+
+.report-section { padding: 18px 20px; border: 1px solid #242424; border-radius: 14px; background: #0e0e0e; }
+.report-section h2 { font-size: 15px; color: #f2cd87; margin-bottom: 12px; }
+.report-section p, .report-section li { color: #c9c9c9; font-size: 14px; line-height: 1.6; }
+.report-section ul { padding-left: 18px; }
+.report-summary { margin-top: 10px; font-size: 13px; color: #8f8f8f; }
+.detection-list { display: grid; gap: 10px; margin-bottom: 8px; }
+
+.cost-table { width: 100%; border-collapse: collapse; }
+.cost-table th, .cost-table td { text-align: left; padding: 8px 10px; font-size: 13px; border-bottom: 1px solid #222; color: #cfcfcf; }
+.cost-table th { color: #f2cd87; font-weight: 600; }

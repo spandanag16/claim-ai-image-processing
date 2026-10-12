@@ -1,52 +1,71 @@
 # AI-Powered Automated Insurance Claim Estimator
 
-This repository contains the existing React/Vite frontend and FastAPI backend for the college project. The `spandana-image-processing` branch extends the existing three-step claim flow with a real vehicle-image input and preparation pipeline.
+React/Vite frontend + FastAPI backend for the college project. This branch (`spandana-image-processing`) implements the full synopsis pipeline: claim creation, vehicle/accident details, image collection, preprocessing, damage detection, severity assessment, repair-cost estimation, recommendations, and the claim report.
 
-## Current implementation
-
-The current workflow is:
+## Pipeline
 
 ```text
-Vehicle image selected in React
+Create claim (vehicle details)
         ↓
-Local preview and client-side JPG/JPEG/PNG + 10 MB validation
+Accident details (date/time, location, type, description)
         ↓
-Multipart upload to FastAPI
+Upload vehicle images (front/rear/sides/close-ups, max 8)
         ↓
-Server-side MIME, extension, size, and image-content validation
+Validation → original preserved → 640×640 letterbox (PIL)
         ↓
-Original image saved with a UUID filename
+OpenCV noise reduction + normalization → uploads/ai_ready/
         ↓
-Separate 640 × 640 RGB/JPEG image created with aspect-ratio-preserving padding
+Damage detection (YOLO if configured, else OpenCV heuristics)
         ↓
-JSON response marks the processed image ready for future YOLO inference
+Damage type + vehicle part + confidence + bounding box
+        ↓
+Severity score 0-100 → Minor / Moderate / Severe
+        ↓
+Repair cost from predefined pricing database (parts + labour)
+        ↓
+Repair recommendation → claim report → saved to SQLite
 ```
 
-The original upload is never overwritten. Generated files are written under `backend/uploads/original/` and `backend/uploads/processed/` during local development; those directories are ignored by Git.
+## Backend modules
 
-The existing frontend route is `http://localhost:5173/new-claim/images`. The backend endpoint is:
+| File | Synopsis stage |
+| --- | --- |
+| `image_pipeline.py` | 4 — validation, resize, OpenCV denoise/normalize |
+| `detection.py` | 5, 6 — YOLO adapter + OpenCV fallback, part & damage-type mapping |
+| `analysis.py` | 7, 8, 9, 10 — severity, cost estimation, recommendations, report |
+| `database.py` | SQLite persistence for generated claim reports |
 
-```text
-POST http://127.0.0.1:8000/api/images/upload
-Content-Type: multipart/form-data
-Field: file
+## Detection engine (honest status)
+
+`GET /api/yolo/status` reports the real engine. Without a trained model the
+service runs **classical OpenCV heuristics** and labels every detection
+`engine: "opencv_heuristic"` — these are rule-based regions, not trained-model
+predictions, and no accuracy is claimed.
+
+To switch to a real model, train or obtain a fine-tuned YOLO on annotated
+vehicle-damage data, then set:
+
+```bash
+export CLAIMAI_YOLO_MODEL=backend/models/vehicle_damage.pt
+pip install ultralytics
 ```
 
-The endpoint returns the upload ID, original dimensions and path, processed dimensions and path, and an explicit YOLO status. The current status is `not_configured` with an empty `detections` list. No trained model or damage result is claimed.
+`detection.detect()` then runs YOLO inference instead of heuristics; the rest
+of the pipeline is unchanged.
 
-## Planned YOLO stage
+## API
 
-YOLO is being considered because it can perform object detection in a single image pass and return both class predictions and bounding boxes. For this project, possible classes could include damaged bumper, damaged bonnet, damaged door, damaged fender, broken headlight, cracked windshield, and damaged mirror. The final class list should be decided from the dataset rather than assumed in advance.
-
-A training dataset will require representative vehicle images with annotations. Each damaged region should have a bounding box and a class label in the format required by the selected YOLO implementation. The box describes the damaged region using its image coordinates. During inference, the model would return a class, a box, and a confidence score. A confidence threshold can filter uncertain detections, but the threshold must be selected and evaluated using validation data.
-
-The later insurance-estimation stage can combine detected parts, box size or region characteristics, confidence-aware rules, and other claim information to estimate severity. Repair-cost estimation must be designed and validated separately; a bounding box alone is not a repair price and this branch does not fabricate cost, accuracy, dataset, or training results.
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/images/upload` | Validate + preprocess one image |
+| `POST` | `/api/analysis/run` | Detect damage, score severity, estimate cost, build report |
+| `GET` | `/api/claims/{claim_id}/report` | Fetch the stored claim report |
+| `GET` | `/api/yolo/status` | Real detection-engine status |
+| `GET` | `/health` | Health check |
 
 ## Setup
 
 ### Backend
-
-From the repository root:
 
 ```bash
 cd backend
@@ -56,16 +75,7 @@ pip install -r requirements.txt
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Backend URLs:
-
-- API root: `http://127.0.0.1:8000/`
-- Health: `http://127.0.0.1:8000/health`
-- Upload: `POST http://127.0.0.1:8000/api/images/upload`
-- YOLO integration status: `GET http://127.0.0.1:8000/api/yolo/status`
-
 ### Frontend
-
-In a second terminal:
 
 ```bash
 cd frontend
@@ -73,50 +83,38 @@ npm install
 npm run dev
 ```
 
-Frontend URL: `http://localhost:5173/`
-
-The frontend already uses Axios in `frontend/api.js`; no new frontend package was needed.
+Frontend URL: `http://localhost:5173/`. The Vite dev server proxies `/api` to
+`http://127.0.0.1:8000`; set `VITE_BACKEND_URL` to point elsewhere.
 
 ## Testing
 
-Backend tests are in `backend/test_main.py` and cover JPG, JPEG, PNG, invalid extension/type, mismatched image content, missing file, oversized file, 640 × 640 preprocessing, preservation of original files, and explicit YOLO-not-configured behavior.
-
-Run them with:
-
 ```bash
-cd backend
-pytest -q
+cd backend && pytest -q          # upload validation, preprocessing, full analysis pipeline
+cd frontend && npm run build     # lint requires an eslint config that is not yet committed
 ```
 
-Build and lint the frontend with:
+## Pricing database
 
-```bash
-cd frontend
-npm run lint
-npm run build
-```
+`analysis.PART_PRICING` holds INR part + labour baselines for Bumper, Headlight,
+Door, Bonnet, Fender, Windshield and Mirror. Severity bands apply labour
+multipliers (1.0 / 1.5 / 2.2) and damage types apply cost factors, per synopsis
+§4.6. These are demo baselines, not insurer-approved rates.
 
-## Current versus future work
+## Remaining work
 
-### Currently implemented
+- Collect an annotated vehicle-damage dataset and train/validate YOLO; record real metrics.
+- Replace heuristic part mapping with model-predicted parts.
+- Validate cost factors against actual repair-shop data.
+- Authentication, claim history UI, MySQL deployment.
 
-- Existing React claim steps remain in place.
-- Image selection, drag-and-drop, previews, removal, and an eight-image limit remain in the frontend.
-- JPG, JPEG, and PNG validation is performed in the browser and again in the backend.
-- A 10 MB per-image limit is enforced.
-- Uploaded files receive safe unique names and originals are preserved.
-- A separate padded 640 × 640 RGB/JPEG preparation is generated.
-- Upload/loading/success/error states are shown in the image step.
-- A review screen summarizes preparation and explicitly reports that YOLO is not configured.
+## Explanation for the project guide
 
-### Planned / future work
-
-- Select or collect a labeled vehicle-damage dataset.
-- Define and review the final vehicle-part and damage-class taxonomy.
-- Train and validate a YOLO model; record real evaluation metrics only after experiments.
-- Replace the status-only YOLO interface with an actual model adapter.
-- Map validated detections to severity rules and then to a separately validated insurance estimate.
-
-## Project-guide explanation
-
-I implemented the vehicle-image input pipeline inside the existing claim flow. The user selects and previews vehicle photos, and the frontend uploads them to FastAPI as multipart files. The backend checks the file type and size, verifies that the content is a real supported image, saves the original safely, and creates a separate normalized 640 × 640 image for future computer-vision inference. YOLO is being considered because it can locate damaged vehicle parts with bounding boxes and confidence scores. The next development step is to prepare an annotated dataset, train and validate a YOLO model, and then connect its real detections to damage severity and insurance estimation.
+The claim flow starts with vehicle and accident details, then collects damage
+photographs. Each image is validated, preserved, resized to 640×640, and passed
+through OpenCV noise reduction and contrast normalization. The prepared image
+goes to the damage-detection stage, which reports damaged parts, damage type,
+bounding box and confidence. Those detections produce a 0-100 severity score
+(Minor/Moderate/Severe), a repair-cost estimate from the part pricing database,
+a repair recommendation, and a claim report stored in the database. YOLO is
+wired in as an adapter: the moment a fine-tuned model is available it replaces
+the heuristic engine with no other code changes.
