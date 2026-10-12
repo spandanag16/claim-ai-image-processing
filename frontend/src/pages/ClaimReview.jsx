@@ -53,6 +53,7 @@ function ClaimReview() {
           <div className="badge">DAMAGE ASSESSMENT</div>
           <h1>AI analysis results</h1>
           <p>Detected regions are scored across the uploaded images and grouped into a single claim severity.</p>
+          <div className="engine-status">{analysis.engine === "yolo11n-syndcar" ? "YOLO11n damage detector active" : "Explainable baseline detector active"}</div>
         </div>
 
         <section className={`severity-card severity-${analysis.overall_severity}`}>
