@@ -7,12 +7,18 @@ or severe. It is intentionally structured so a trained detector can replace
 """
 
 from io import BytesIO
+from pathlib import Path
 from typing import Annotated
 
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image, UnidentifiedImageError
+
+try:
+    from ultralytics import YOLO
+except ImportError:  # Optional so the explainable baseline still runs without YOLO.
+    YOLO = None
 
 app = FastAPI(
     title="AI Insurance Claim Estimator",
@@ -49,6 +55,21 @@ SEVERITY_MULTIPLIERS = {
 }
 
 SEVERITY_RANK = {"minor": 1, "moderate": 2, "severe": 3}
+
+YOLO_MODEL_PATH = Path(__file__).resolve().parents[1] / "ml-models" / "syndcar-damage" / "weights" / "best.pt"
+YOLO_MODEL = None
+if YOLO is not None and YOLO_MODEL_PATH.exists():
+    try:
+        YOLO_MODEL = YOLO(str(YOLO_MODEL_PATH))
+    except Exception:
+        YOLO_MODEL = None
+
+YOLO_DAMAGE_TYPES = {
+    "Broken_Glass": "broken component",
+    "Cracks": "crack",
+    "Scratches": "scratch",
+    "Broken_Lights": "broken component",
+}
 
 RECOMMENDATIONS = {
     "scratch": "Paint repair",
@@ -116,13 +137,78 @@ def classify_damage_type(severity: str, edge_signal: float, texture_signal: floa
     return "scratch"
 
 
+def analyze_with_yolo(image: Image.Image) -> dict | None:
+    """Analyze an image with the trained SYNDCAR YOLO detector.
+
+    Returns None when no detection clears the confidence threshold, allowing
+    the existing explainable baseline to handle difficult or unseen images.
+    """
+    if YOLO_MODEL is None:
+        return None
+
+    image = image.convert("RGB")
+    results = YOLO_MODEL.predict(source=np.asarray(image), conf=0.25, iou=0.45, verbose=False)
+    result = results[0]
+    if result.boxes is None or len(result.boxes) == 0:
+        return None
+
+    height, width = image.height, image.width
+    detections = []
+    for box, confidence, class_id in zip(
+        result.boxes.xyxy.cpu().numpy(),
+        result.boxes.conf.cpu().numpy(),
+        result.boxes.cls.cpu().numpy(),
+    ):
+        x1, y1, x2, y2 = [float(value) for value in box]
+        label = result.names[int(class_id)]
+        normalized = [
+            float(np.clip(x1 / width, 0, 1)),
+            float(np.clip(y1 / height, 0, 1)),
+            float(np.clip(x2 / width, 0, 1)),
+            float(np.clip(y2 / height, 0, 1)),
+        ]
+        area_ratio = max(0.0, (normalized[2] - normalized[0]) * (normalized[3] - normalized[1]))
+        damage_score = round(float(np.clip(0.45 * confidence + 0.55 * min(area_ratio * 8, 1), 0, 1)), 3)
+        severity = classify_severity(damage_score)
+        damage_type = YOLO_DAMAGE_TYPES.get(label, "broken component")
+        part = infer_part(*normalized)
+        detections.append({
+            "label": label.replace("_", " "),
+            "part": part,
+            "damage_type": damage_type,
+            "recommendation": RECOMMENDATIONS[damage_type],
+            "confidence": round(float(confidence), 3),
+            "severity": severity,
+            "damage_score": damage_score,
+            "bbox": [round(value, 3) for value in normalized],
+        })
+
+    detections.sort(key=lambda item: item["damage_score"], reverse=True)
+    strongest = detections[0]
+    repair_estimate = estimate_repair(strongest["part"], strongest["severity"])
+    return {
+        "damage_score": strongest["damage_score"],
+        "severity": strongest["severity"],
+        "detections": detections,
+        "signals": {"model_confidence": strongest["confidence"]},
+        "repair_estimate": repair_estimate,
+        "damage_type": strongest["damage_type"],
+        "recommendation": strongest["recommendation"],
+        "engine": "yolo11n-syndcar",
+    }
+
+
 def analyze_image(image: Image.Image) -> dict:
-    """Return explainable baseline detections for one image.
+    """Return YOLO detections, falling back to the explainable baseline.
 
     High local edges and texture are useful first-pass signals for scratches,
     dents, cracks, and broken contours. This is not a substitute for a trained
     vehicle-damage dataset/model; the response labels this method explicitly.
     """
+    yolo_analysis = analyze_with_yolo(image)
+    if yolo_analysis is not None:
+        return yolo_analysis
+
     image = image.convert("RGB")
     image.thumbnail((640, 640))
     rgb = np.asarray(image, dtype=np.float32) / 255.0
@@ -190,7 +276,11 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "analysis_engine": "baseline-computer-vision"}
+    return {
+        "status": "healthy",
+        "analysis_engine": "yolo11n-syndcar" if YOLO_MODEL is not None else "baseline-computer-vision",
+        "yolo_model_loaded": YOLO_MODEL is not None,
+    }
 
 
 @app.post("/api/analyze-claim")
@@ -243,6 +333,6 @@ async def analyze_claim(files: Annotated[list[UploadFile], File(...)]):
         "repair_estimate": total_repair_estimate,
         "images_analyzed": len(results),
         "results": results,
-        "engine": "baseline-computer-vision",
-        "disclaimer": "Prototype estimate. Replace the baseline with a trained detector before production or real claim decisions.",
+        "engine": results[0].get("engine", "baseline-computer-vision"),
+        "disclaimer": "Prototype estimate for educational use. YOLO predictions are trained on the public SYNDCAR dataset; verify all results with a qualified surveyor before real claim decisions.",
     }

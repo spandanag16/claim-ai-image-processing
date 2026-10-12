@@ -3,3 +3,4 @@ uvicorn[standard]
 python-multipart
 numpy
 Pillow
+ultralytics>=8.3.0

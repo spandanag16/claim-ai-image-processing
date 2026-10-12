@@ -2,7 +2,7 @@
 
 ## Damage detection and classification
 
-The current implementation includes an explainable **baseline computer-vision engine**. It accepts 2–8 JPG, PNG, or WEBP vehicle images, detects the strongest high-texture/high-edge region as a potential damaged panel, and classifies each image as:
+The current implementation uses a trained **YOLO11n damage detector** when the bundled model is available. It accepts 1–8 JPG, PNG, or WEBP vehicle images and detects four SYNDCAR damage classes: broken glass, cracks, scratches, and broken lights. The system maps detector confidence and bounding-box size to the project severity classes:
 
 - **Minor**: score below 0.40 — light visual damage signals such as scratches or small dents
 - **Moderate**: score from 0.40 to 0.67 — stronger deformation/crack/impact signals
@@ -10,7 +10,7 @@ The current implementation includes an explainable **baseline computer-vision en
 
 The overall claim severity is the most severe classification across the uploaded images. The review page displays each image score, detected region, aggregate score, and the engine disclaimer.
 
-> This is a project baseline for demonstration. A production or real insurance workflow should replace `analyze_image` in `backend/main.py` with a trained detector/classifier validated on a labeled vehicle-damage dataset.
+If the YOLO package or model is unavailable, the backend automatically falls back to the explainable edge-and-texture baseline. This keeps the application runnable while making the model dependency explicit.
 
 ## Run locally
 
@@ -56,14 +56,22 @@ The review page shows per-image parts cost, labour cost, and total cost, plus a 
 ## Integrated workflow
 
 1. Vehicle details and accident details are captured in the claim flow and retained in browser storage.
-2. The image-upload step validates and previews 2–8 vehicle images.
-3. `POST /api/analyze-claim` validates the files and runs the baseline damage detector.
+2. The image-upload step validates and previews 1–8 vehicle images.
+3. `POST /api/analyze-claim` validates the files and runs YOLO11n, with the baseline as fallback.
 4. Each image receives a damaged-part label, normalized damage score, severity, and repair estimate.
 5. Overall severity is the highest severity across all images.
 6. Repair costs are consolidated by unique damaged part; multiple photos of the same part do not multiply the final estimate.
 7. The review screen displays per-image detections, overall severity, unique damaged parts, parts cost, labour cost, and total INR estimate.
 
 For local verification, the frontend build/lint and the backend multipart workflow should both pass before presenting the project.
+
+## YOLO model and training
+
+The bundled model is `ml-models/syndcar-damage/weights/best.pt`. It was fine-tuned from YOLO11n for 30 epochs on the public SYNDCAR dataset, which provides 245 images and YOLO-format damage labels. The training split used 171 images, with 49 validation images and 25 test images. The final validation mAP50 was approximately 0.67 on the held-out validation split.
+
+The training dataset is not stored in GitHub because its published ZIP is approximately 3.2 GB. To retrain, download SYNDCAR from [Mendeley Data](https://data.mendeley.com/datasets/hzpj48krdt/1), extract it into `ml-data/SYNDCAR`, install `ultralytics`, prepare the 70/20/10 split, and run Ultralytics training with `data_damage.yaml`. The dataset is intended for research and educational use under its published license.
+
+The model is suitable for academic demonstration, not for making real insurance claim decisions. Real deployment would require a larger representative dataset, independent testing, calibration, and expert review.
 
 ## Damage type, recommendation, and report
 
