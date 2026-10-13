@@ -10,6 +10,7 @@ Implements synopsis stages 7-10:
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from detection import DAMAGE_BASE_SCORE
 
@@ -147,7 +148,7 @@ def build_report(*, claim_id: str, vehicle: dict, accident: dict, image_results:
         decision = "Supports standard cashless settlement review."
 
     return {
-        "report_id": f"RPT-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
+        "report_id": f"RPT-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{uuid4().hex[:8].upper()}",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "claim_id": claim_id,
         "vehicle": vehicle,

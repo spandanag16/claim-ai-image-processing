@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api";
 
-const MAX_IMAGES = 8;
+const MAX_IMAGES = 1;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_TYPES = ["image/jpeg", "image/png"];
 
@@ -88,8 +88,8 @@ function ImageUpload() {
     setError("");
     setSuccessMessage("");
 
-    if (images.length < 2) {
-      setError("Please upload at least 2 images of the vehicle.");
+    if (images.length !== 1) {
+      setError("Please upload one vehicle image to continue.");
       return;
     }
 
@@ -147,7 +147,7 @@ function ImageUpload() {
         <div className="claim-heading">
           <div className="badge">STEP 03 / 03</div>
           <h1>Show us the damage</h1>
-          <p>Upload clear photographs from different angles. The backend validates and prepares each image for the future AI damage-detection stage.</p>
+          <p>Upload one clear vehicle photograph. The backend validates and prepares it for YOLO damage detection.</p>
         </div>
 
         <div className="upload-area" onDrop={handleDrop} onDragOver={(event) => event.preventDefault()} onClick={() => fileInputRef.current?.click()}>
@@ -155,15 +155,15 @@ function ImageUpload() {
           <div className="upload-icon">↑</div>
           <h2>Drop your vehicle images here</h2>
           <p>or click to browse from your device</p>
-          <span>JPG, JPEG or PNG · Maximum 10 MB per image · Up to 8 images</span>
+          <span>JPG, JPEG or PNG · Maximum 10 MB · One image</span>
         </div>
 
         {error && <div className="form-error upload-error">{error}</div>}
         {successMessage && <div className="upload-success">{successMessage}</div>}
 
         <div className="upload-header">
-          <div><h3>Selected Images</h3><span>{images.length} / {MAX_IMAGES} images</span></div>
-          {images.length > 0 && <button type="button" className="add-more-button" onClick={() => fileInputRef.current?.click()}>+ Add More</button>}
+          <div><h3>Selected Image</h3><span>{images.length} / {MAX_IMAGES} image</span></div>
+          {images.length === 0 && <button type="button" className="add-more-button" onClick={() => fileInputRef.current?.click()}>+ Choose Image</button>}
         </div>
 
         {images.length > 0 ? (
@@ -176,7 +176,7 @@ function ImageUpload() {
             ))}
           </div>
         ) : (
-          <div className="empty-images"><span>No images selected yet</span></div>
+          <div className="empty-images"><span>No image selected yet</span></div>
         )}
 
         <div className="upload-tips">
@@ -189,7 +189,7 @@ function ImageUpload() {
         </div>
 
         <div className="form-footer">
-          <span>{isUploading ? "Preparing images…" : images.length === 0 ? "Upload at least 2 images to continue" : `${images.length} image${images.length > 1 ? "s" : ""} ready to upload`}</span>
+          <span>{isUploading ? "Preparing image…" : images.length === 0 ? "Upload one image to continue" : "One image ready to upload"}</span>
           <button type="button" className="primary-btn" onClick={handleContinue} disabled={isUploading}>
             {isUploading ? "Uploading…" : "Upload & Continue"}<span>→</span>
           </button>

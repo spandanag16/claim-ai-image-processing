@@ -45,7 +45,7 @@ function Review() {
           <p>
             {report
               ? "The claim report below covers damage detection, severity, repair cost estimation, and recommendations."
-              : `${images.length} vehicle image(s) uploaded, validated, resized, denoised, and normalized for the AI pipeline.`}
+              : `${images.length} vehicle image uploaded, validated, resized, denoised, and normalized for the AI pipeline.`}
           </p>
         </div>
 

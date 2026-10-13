@@ -137,3 +137,13 @@ def test_full_analysis_pipeline(tmp_path: Path, monkeypatch):
 def test_analysis_rejects_unknown_upload():
     response = client.post("/api/analysis/run", json={"upload_ids": ["missing-id"]})
     assert response.status_code == 404
+
+
+def test_analysis_requires_exactly_one_upload():
+    empty_response = client.post("/api/analysis/run", json={"upload_ids": []})
+    assert empty_response.status_code == 422
+
+    multiple_response = client.post(
+        "/api/analysis/run", json={"upload_ids": ["first", "second"]}
+    )
+    assert multiple_response.status_code == 422

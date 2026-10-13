@@ -144,16 +144,36 @@ def detect_with_yolo(image_path: Path, model_path: str) -> list[Detection]:
             boxes.xyxy.tolist(), boxes.conf.tolist(), boxes.cls.tolist()
         ):
             x1, y1, x2, y2 = [int(v) for v in box]
-            name = result.names[int(cls_id)]
+            name = str(result.names[int(cls_id)])
             detections.append(Detection(
                 part=_map_class_to_part(name) if name not in VEHICLE_PARTS else name,
-                damage_type=name if name in DAMAGE_TYPES else "Scratch",
+                damage_type=_map_class_to_damage(name),
                 confidence=round(float(score), 2),
                 box=(x1, y1, x2, y2),
                 area_ratio=round((x2 - x1) * (y2 - y1) / (640 * 640), 4),
                 engine="yolo",
             ))
     return detections
+
+
+def _map_class_to_damage(class_name: str) -> str:
+    """Map common YOLO class-name conventions to the report damage taxonomy."""
+    lowered = class_name.lower().replace("_", " ").replace("-", " ")
+    for damage_type in DAMAGE_TYPES:
+        if damage_type.lower() in lowered:
+            return damage_type
+    keyword_map = {
+        "scratch": "Scratch",
+        "dent": "Dent",
+        "crack": "Crack",
+        "broken": "Broken Component",
+        "break": "Broken Component",
+        "deform": "Deformation",
+    }
+    for keyword, damage_type in keyword_map.items():
+        if keyword in lowered:
+            return damage_type
+    return "Scratch"
 
 
 def _map_class_to_part(class_name: str) -> str:

@@ -9,7 +9,7 @@ Create claim (vehicle details)
         ↓
 Accident details (date/time, location, type, description)
         ↓
-Upload vehicle images (front/rear/sides/close-ups, max 8)
+Upload one vehicle image
         ↓
 Validation → original preserved → 640×640 letterbox (PIL)
         ↓
@@ -42,8 +42,8 @@ service runs **classical OpenCV heuristics** and labels every detection
 `engine: "opencv_heuristic"` — these are rule-based regions, not trained-model
 predictions, and no accuracy is claimed.
 
-To switch to a real model, train or obtain a fine-tuned YOLO on annotated
-vehicle-damage data, then set:
+To switch to a real damage model, train or obtain a fine-tuned YOLO model on
+annotated vehicle-damage data, then set:
 
 ```bash
 export CLAIMAI_YOLO_MODEL=backend/models/vehicle_damage.pt
@@ -52,6 +52,12 @@ pip install ultralytics
 
 `detection.detect()` then runs YOLO inference instead of heuristics; the rest
 of the pipeline is unchanged.
+
+The repository installs the `ultralytics` runtime, but it does not include a
+trained damage model. A general COCO YOLO model must not be used as a damage
+model because its classes do not represent scratches, dents, or broken parts.
+Until `CLAIMAI_YOLO_MODEL` points to a compatible fine-tuned model, the API
+reports `cv_fallback` and labels its results as heuristic.
 
 ## API
 
@@ -90,7 +96,8 @@ Frontend URL: `http://localhost:5173/`. The Vite dev server proxies `/api` to
 
 ```bash
 cd backend && pytest -q          # upload validation, preprocessing, full analysis pipeline
-cd frontend && npm run build     # lint requires an eslint config that is not yet committed
+cd frontend && npm run build
+cd frontend && npm run lint
 ```
 
 ## Pricing database
