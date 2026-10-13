@@ -9,7 +9,7 @@ Create claim (vehicle details)
         ↓
 Accident details (date/time, location, type, description)
         ↓
-Upload one vehicle image
+Upload one to eight vehicle images
         ↓
 Validation → original preserved → 640×640 letterbox (PIL)
         ↓
@@ -72,8 +72,8 @@ human.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `POST` | `/api/images/upload` | Validate + preprocess one image |
-| `POST` | `/api/analysis/run` | Detect damage, score severity, estimate cost, build report |
+| `POST` | `/api/images/upload` | Validate + preprocess one image at a time |
+| `POST` | `/api/analysis/run` | Analyze 1–8 prepared images, score severity, estimate cost, build report |
 | `GET` | `/api/claims/{claim_id}/report` | Fetch the stored claim report |
 | `GET` | `/api/yolo/status` | Real detection-engine status |
 | `GET` | `/health` | Health check |

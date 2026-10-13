@@ -112,14 +112,14 @@ async def upload_vehicle_image(file: UploadFile = File(...)):
 
 class AnalyzeRequest(BaseModel):
     claim_id: str = "CLAIM-LOCAL"
-    upload_ids: list[str] = Field(min_length=1, max_length=1)
+    upload_ids: list[str] = Field(min_length=1, max_length=8)
     vehicle: dict = Field(default_factory=dict)
     accident: dict = Field(default_factory=dict)
 
 
 @app.post("/api/analysis/run")
 def run_analysis(request: AnalyzeRequest):
-    """Full pipeline for one previously uploaded image."""
+    """Full pipeline for one to eight previously uploaded images."""
     image_results = []
     for upload_id in request.upload_ids[:8]:
         ai_ready = UPLOAD_ROOT / "ai_ready" / f"{upload_id}.jpg"

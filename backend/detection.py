@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import asdict, dataclass
+from functools import lru_cache
 from pathlib import Path
 
 import cv2
@@ -131,9 +132,7 @@ def detect_with_opencv(image_path: Path) -> list[Detection]:
 
 def detect_with_yolo(image_path: Path, model_path: str) -> list[Detection]:
     """Run a fine-tuned YOLO damage model; class names come from the model."""
-    from ultralytics import YOLO
-
-    model = YOLO(model_path)
+    model = _load_yolo_model(model_path)
     results = model.predict(str(image_path), conf=0.35, verbose=False)
     detections: list[Detection] = []
     for result in results:
@@ -154,6 +153,14 @@ def detect_with_yolo(image_path: Path, model_path: str) -> list[Detection]:
                 engine="yolo",
             ))
     return detections
+
+
+@lru_cache(maxsize=4)
+def _load_yolo_model(model_path: str):
+    """Load each configured checkpoint once per worker process."""
+    from ultralytics import YOLO
+
+    return YOLO(model_path)
 
 
 def _map_class_to_damage(class_name: str) -> str:

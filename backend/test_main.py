@@ -139,11 +139,11 @@ def test_analysis_rejects_unknown_upload():
     assert response.status_code == 404
 
 
-def test_analysis_requires_exactly_one_upload():
+def test_analysis_requires_one_to_eight_uploads():
     empty_response = client.post("/api/analysis/run", json={"upload_ids": []})
     assert empty_response.status_code == 422
 
     multiple_response = client.post(
-        "/api/analysis/run", json={"upload_ids": ["first", "second"]}
+        "/api/analysis/run", json={"upload_ids": [f"upload-{index}" for index in range(9)]}
     )
     assert multiple_response.status_code == 422
