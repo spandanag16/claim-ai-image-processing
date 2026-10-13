@@ -26,6 +26,7 @@ SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 SUPPORTED_CONTENT_TYPES = {"image/jpeg", "image/png"}
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 YOLO_INPUT_SIZE = (640, 640)
+DEFAULT_YOLO_MODEL = Path(__file__).resolve().parent / "models" / "vehicle_damage.pt"
 
 
 @dataclass(frozen=True)
@@ -165,7 +166,8 @@ def model_status() -> dict[str, object]:
     """
     import os
 
-    model_path = os.environ.get("CLAIMAI_YOLO_MODEL", "")
+    configured_path = os.environ.get("CLAIMAI_YOLO_MODEL", "")
+    model_path = configured_path or str(DEFAULT_YOLO_MODEL)
     if model_path and Path(model_path).exists():
         try:
             from ultralytics import YOLO  # optional dependency
@@ -193,9 +195,17 @@ def model_status() -> dict[str, object]:
 
 
 def yolo_inference_status() -> dict[str, object]:
-    """Return the honest integration status for the not-yet-configured YOLO stage."""
+    """Return the honest integration status for the YOLO stage."""
+    status = model_status()
+    if status["status"] == "yolo_configured":
+        return {
+            "status": "configured",
+            "model": status["model"],
+            "message": "A fine-tuned vehicle-damage YOLO model is ready for inference.",
+            "detections": [],
+        }
     return {
         "status": "not_configured",
-        "message": "Processed images are ready, but no trained YOLO model is configured yet.",
+        "message": status["message"],
         "detections": [],
     }

@@ -146,7 +146,7 @@ def detect_with_yolo(image_path: Path, model_path: str) -> list[Detection]:
             x1, y1, x2, y2 = [int(v) for v in box]
             name = str(result.names[int(cls_id)])
             detections.append(Detection(
-                part=_map_class_to_part(name) if name not in VEHICLE_PARTS else name,
+                part=name if name in VEHICLE_PARTS else _region_to_part(x1, y1, x2, y2),
                 damage_type=_map_class_to_damage(name),
                 confidence=round(float(score), 2),
                 box=(x1, y1, x2, y2),
@@ -168,6 +168,11 @@ def _map_class_to_damage(class_name: str) -> str:
         "crack": "Crack",
         "broken": "Broken Component",
         "break": "Broken Component",
+        "lamp": "Broken Component",
+        "glass": "Crack",
+        "shatter": "Crack",
+        "tire": "Deformation",
+        "tyre": "Deformation",
         "deform": "Deformation",
     }
     for keyword, damage_type in keyword_map.items():
@@ -186,7 +191,8 @@ def _map_class_to_part(class_name: str) -> str:
 
 def detect(image_path: Path) -> dict[str, object]:
     """Entry point used by the analysis service."""
-    model_path = os.environ.get("CLAIMAI_YOLO_MODEL", "")
+    default_model = Path(__file__).resolve().parent / "models" / "vehicle_damage.pt"
+    model_path = os.environ.get("CLAIMAI_YOLO_MODEL", "") or str(default_model)
     engine = "opencv_heuristic"
     try:
         if model_path and Path(model_path).exists():

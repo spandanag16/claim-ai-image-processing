@@ -42,8 +42,10 @@ service runs **classical OpenCV heuristics** and labels every detection
 `engine: "opencv_heuristic"` — these are rule-based regions, not trained-model
 predictions, and no accuracy is claimed.
 
-To switch to a real damage model, train or obtain a fine-tuned YOLO model on
-annotated vehicle-damage data, then set:
+This branch includes a fine-tuned YOLO11m vehicle-damage checkpoint at
+`backend/models/vehicle_damage.pt`. It detects `dent`, `scratch`, `crack`,
+`shattered_glass`, `broken_lamp`, and `flat_tire`. The backend loads this
+checkpoint automatically. To use another compatible model, set:
 
 ```bash
 export CLAIMAI_YOLO_MODEL=backend/models/vehicle_damage.pt
@@ -53,11 +55,18 @@ pip install ultralytics
 `detection.detect()` then runs YOLO inference instead of heuristics; the rest
 of the pipeline is unchanged.
 
-The repository installs the `ultralytics` runtime, but it does not include a
-trained damage model. A general COCO YOLO model must not be used as a damage
-model because its classes do not represent scratches, dents, or broken parts.
-Until `CLAIMAI_YOLO_MODEL` points to a compatible fine-tuned model, the API
-reports `cv_fallback` and labels its results as heuristic.
+The repository installs the `ultralytics` runtime and includes the trained
+checkpoint under the model author's MIT license. A general COCO YOLO model
+must not be used as a damage model because its classes do not represent
+scratches, dents, or broken parts. If the bundled or configured checkpoint
+cannot be loaded, the API reports `cv_fallback` and labels its results as
+heuristic.
+
+The checkpoint was obtained from the public
+[YOLO11m Car Body Damage Detector repository](https://github.com/ReverendBayes/YOLO11m-Car-Damage-Detector).
+Its published model metrics are not independently reproduced by this project;
+claims should therefore be treated as assistive estimates and reviewed by a
+human.
 
 ## API
 

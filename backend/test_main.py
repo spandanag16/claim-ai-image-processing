@@ -41,7 +41,7 @@ def test_valid_vehicle_images_are_prepared(tmp_path: Path, monkeypatch, filename
     assert payload["processed_image"]["height"] == 640
     assert (tmp_path / "uploads" / "original" / f"{payload['upload_id']}{Path(filename).suffix}").exists()
     assert (tmp_path / "uploads" / "processed" / f"{payload['upload_id']}.jpg").exists()
-    assert payload["yolo"]["status"] == "not_configured"
+    assert payload["yolo"]["status"] == "configured"
     assert payload["yolo"]["detections"] == []
 
 
@@ -83,7 +83,7 @@ def test_yolo_status_reports_real_engine():
     response = client.get("/api/yolo/status")
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] in {"cv_fallback", "yolo_configured"}
+    assert payload["status"] == "yolo_configured"
     assert payload["detections"] == []
 
 
