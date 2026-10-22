@@ -28,13 +28,14 @@ PART_PRICING = {
 
 # Synopsis §4.5 typical-damage mapping.
 SEVERITY_RANGES = [
-    ("Minor", 0, 34),
-    ("Moderate", 34, 67),
-    ("Severe", 67, 101),
+    ("Minor", 0, 40),
+    ("Moderate", 40, 68),
+    ("Severe", 68, 101),
 ]
 
 # Labour multiplier per severity band (synopsis §4.6 labour cost input).
-SEVERITY_LABOUR_FACTOR = {"Minor": 1.0, "Moderate": 1.5, "Severe": 2.2}
+SEVERITY_PART_FACTOR = {"Minor": 0.35, "Moderate": 0.70, "Severe": 1.00}
+SEVERITY_LABOUR_FACTOR = {"Minor": 0.50, "Moderate": 0.85, "Severe": 1.30}
 
 DAMAGE_COST_FACTOR = {
     "Scratch": 0.15,
@@ -71,6 +72,17 @@ def assess_image(detections: list[dict]) -> dict:
     if len(scores) >= 3:
         score = min(100.0, score + 0.15 * scores[1])
 
+    # A high-risk structural/component damage label should not be reduced to
+    # Moderate only because the detector confidence or visible contour area is
+    # imperfect. This is intentionally conservative for claim triage.
+    severe_damage_present = any(
+        d["damage_type"] in {"Broken Component", "Deformation"}
+        and d["confidence"] >= 0.45
+        for d in detections
+    )
+    if severe_damage_present:
+        score = max(score, 68.0)
+
     severity = classify_severity(score)
     parts = sorted({d["part"] for d in detections})
     types = sorted({d["damage_type"] for d in detections})
@@ -83,20 +95,26 @@ def assess_image(detections: list[dict]) -> dict:
 
 def estimate_cost(detections: list[dict], severity: str) -> dict:
     """Stage 8: repair-cost estimation from the predefined pricing database."""
-    factor = SEVERITY_LABOUR_FACTOR[severity]
+    parts_factor = SEVERITY_PART_FACTOR[severity]
+    labour_factor = SEVERITY_LABOUR_FACTOR[severity]
     lines: list[dict] = []
     total = 0.0
 
-    seen: set[tuple[str, str]] = set()
+    # Several photographs may show the same part. Retain the strongest
+    # detection for that part and charge the repair only once.
+    strongest_by_part: dict[str, tuple[float, dict]] = {}
     for detection in detections:
-        key = (detection["part"], detection["damage_type"])
-        if key in seen:
-            continue
-        seen.add(key)
+        score = score_detection(
+            detection["damage_type"], detection["area_ratio"], detection["confidence"]
+        )
+        current = strongest_by_part.get(detection["part"])
+        if current is None or score > current[0]:
+            strongest_by_part[detection["part"]] = (score, detection)
+
+    for _, detection in strongest_by_part.values():
         pricing = PART_PRICING.get(detection["part"], PART_PRICING["Unknown Part"])
-        cost_factor = DAMAGE_COST_FACTOR.get(detection["damage_type"], 0.3)
-        parts_cost = pricing["part_cost"] * cost_factor
-        labour_cost = pricing["labour_cost"] * cost_factor * factor
+        parts_cost = pricing["part_cost"] * parts_factor
+        labour_cost = pricing["labour_cost"] * labour_factor
         line_total = parts_cost + labour_cost
         total += line_total
         lines.append({
@@ -111,7 +129,7 @@ def estimate_cost(detections: list[dict], severity: str) -> dict:
         "currency": "INR",
         "lines": lines,
         "estimated_repair_cost": round(total, 2),
-        "basis": "Predefined part pricing database x damage-type and severity factors.",
+        "basis": "Predefined part pricing database x severity multipliers; duplicate parts consolidated.",
     }
 
 
@@ -127,8 +145,12 @@ def recommend_repairs(detections: list[dict], severity: str) -> list[str]:
             recommendations.append("Paint repair")
         elif damage_type == "Dent" and "Paintless Dent Repair (PDR)" not in recommendations:
             recommendations.append("Paintless Dent Repair (PDR)")
-        elif damage_type in ("Broken Component", "Crack") and "Component replacement" not in recommendations:
+        elif damage_type == "Crack" and "Component repair or replacement" not in recommendations:
+            recommendations.append("Component repair or replacement")
+        elif damage_type == "Broken Component" and "Component replacement" not in recommendations:
             recommendations.append("Component replacement")
+        elif damage_type == "Deformation" and "Professional inspection" not in recommendations:
+            recommendations.append("Professional inspection")
     if not recommendations:
         recommendations.append("Professional inspection")
     return recommendations

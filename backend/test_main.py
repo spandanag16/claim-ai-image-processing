@@ -24,6 +24,7 @@ def image_bytes(image_format: str, size: tuple[int, int] = (320, 180)) -> bytes:
         ("front.jpg", "image/jpeg", "JPEG"),
         ("side.jpeg", "image/jpeg", "JPEG"),
         ("rear.png", "image/png", "PNG"),
+        ("closeup.webp", "image/webp", "WEBP"),
     ],
 )
 def test_valid_vehicle_images_are_prepared(tmp_path: Path, monkeypatch, filename, content_type, image_format):
@@ -147,3 +148,48 @@ def test_analysis_requires_one_to_eight_uploads():
         "/api/analysis/run", json={"upload_ids": [f"upload-{index}" for index in range(9)]}
     )
     assert multiple_response.status_code == 422
+
+
+def test_cost_estimate_consolidates_same_part_across_damage_types():
+    import analysis
+
+    detections = [
+        {"part": "Door", "damage_type": "Scratch", "area_ratio": 0.02, "confidence": 0.8},
+        {"part": "Door", "damage_type": "Dent", "area_ratio": 0.04, "confidence": 0.8},
+        {"part": "Bumper", "damage_type": "Crack", "area_ratio": 0.03, "confidence": 0.8},
+    ]
+    result = analysis.estimate_cost(detections, "Moderate")
+
+    assert len(result["lines"]) == 2
+    assert {line["part"] for line in result["lines"]} == {"Door", "Bumper"}
+
+
+def test_structural_damage_is_not_downgraded_by_low_confidence_or_small_area():
+    import analysis
+
+    result = analysis.assess_image([
+        {
+            "part": "Door",
+            "damage_type": "Deformation",
+            "area_ratio": 0.01,
+            "confidence": 0.45,
+        }
+    ])
+
+    assert result["score"] >= 68
+    assert result["severity"] == "Severe"
+
+
+def test_authenticity_screen_flags_editing_metadata_and_duplicates():
+    import authenticity
+
+    output = io.BytesIO()
+    image = Image.new("RGB", (64, 64), (120, 120, 120))
+    image.save(output, format="JPEG", comment=b"created with Photoshop")
+    first = authenticity.inspect_image(output.getvalue())
+    second = authenticity.inspect_image(output.getvalue())
+    results = authenticity.compare_duplicates([first, second])
+
+    assert results[0]["status"] == "review_required"
+    assert results[0]["risk_score"] >= 40
+    assert any("similar" in flag for flag in results[1]["flags"])

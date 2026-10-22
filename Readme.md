@@ -11,9 +11,11 @@ Accident details (date/time, location, type, description)
         ↓
 Upload one to eight vehicle images
         ↓
-Validation → original preserved → 640×640 letterbox (PIL)
+Validation (JPG/JPEG/PNG/WEBP) → original preserved → 640×640 letterbox (PIL)
         ↓
 OpenCV noise reduction + normalization → uploads/ai_ready/
+        ↓
+Authenticity-risk screening (metadata + perceptual duplicate checks)
         ↓
 Damage detection (YOLO if configured, else OpenCV heuristics)
         ↓
@@ -23,7 +25,7 @@ Severity score 0-100 → Minor / Moderate / Severe
         ↓
 Repair cost from predefined pricing database (parts + labour)
         ↓
-Repair recommendation → claim report → saved to SQLite
+Repair recommendation → authenticity warning → claim report → saved to SQLite and downloadable as JSON
 ```
 
 ## Backend modules
@@ -32,7 +34,8 @@ Repair recommendation → claim report → saved to SQLite
 | --- | --- |
 | `image_pipeline.py` | 4 — validation, resize, OpenCV denoise/normalize |
 | `detection.py` | 5, 6 — YOLO adapter + OpenCV fallback, part & damage-type mapping |
-| `analysis.py` | 7, 8, 9, 10 — severity, cost estimation, recommendations, report |
+| `analysis.py` | 7, 8, 9, 10 — severity, cost estimation, duplicate-part consolidation, recommendations, report |
+| `authenticity.py` | Upload screening — metadata signals, perceptual hashes, duplicate-image flags |
 | `database.py` | SQLite persistence for generated claim reports |
 
 ## Detection engine (honest status)
@@ -112,9 +115,19 @@ cd frontend && npm run lint
 ## Pricing database
 
 `analysis.PART_PRICING` holds INR part + labour baselines for Bumper, Headlight,
-Door, Bonnet, Fender, Windshield and Mirror. Severity bands apply labour
-multipliers (1.0 / 1.5 / 2.2) and damage types apply cost factors, per synopsis
-§4.6. These are demo baselines, not insurer-approved rates.
+Door, Bonnet, Fender, Windshield and Mirror. Severity bands apply parts
+multipliers (35% / 70% / 100%) and labour multipliers (50% / 85% / 130%).
+Repeated detections are consolidated by vehicle part so the same part is not
+charged once per photograph. These are demo baselines, not insurer-approved rates.
+
+## Image authenticity screening
+
+The report includes a conservative `low_risk`, `review_required`, or `high_risk`
+screening result based on editing or synthetic-generation metadata, missing capture
+metadata as a weak signal, and perceptual similarity between images in the same claim.
+This does not prove that an image is genuine or AI-generated. Suspicious claims are
+flagged for a live camera capture or manual surveyor verification rather than being
+automatically rejected.
 
 ## Remaining work
 

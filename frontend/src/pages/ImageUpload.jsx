@@ -4,7 +4,7 @@ import API from "../api";
 
 const MAX_IMAGES = 8;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ACCEPTED_TYPES = ["image/jpeg", "image/png"];
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 function ImageUpload() {
   const navigate = useNavigate();
@@ -40,10 +40,10 @@ function ImageUpload() {
 
     selectedFiles.forEach((file) => {
       const extension = file.name.split(".").pop()?.toLowerCase();
-      const isSupported = ACCEPTED_TYPES.includes(file.type) && ["jpg", "jpeg", "png"].includes(extension);
+      const isSupported = ACCEPTED_TYPES.includes(file.type) && ["jpg", "jpeg", "png", "webp"].includes(extension);
 
       if (!isSupported) {
-        rejectedFiles.push(`${file.name}: use JPG, JPEG, or PNG.`);
+        rejectedFiles.push(`${file.name}: use JPG, JPEG, PNG, or WEBP.`);
         return;
       }
 
@@ -151,11 +151,11 @@ function ImageUpload() {
         </div>
 
         <div className="upload-area" onDrop={handleDrop} onDragOver={(event) => event.preventDefault()} onClick={() => fileInputRef.current?.click()}>
-          <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple hidden onChange={handleFileSelect} />
+          <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple hidden onChange={handleFileSelect} />
           <div className="upload-icon">↑</div>
           <h2>Drop your vehicle images here</h2>
           <p>or click to browse from your device</p>
-          <span>JPG, JPEG or PNG · Maximum 10 MB per image · 1–8 images</span>
+          <span>JPG, JPEG, PNG or WEBP · Maximum 10 MB per image · 1–8 images</span>
         </div>
 
         {error && <div className="form-error upload-error">{error}</div>}

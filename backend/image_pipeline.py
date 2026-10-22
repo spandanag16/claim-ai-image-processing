@@ -22,8 +22,8 @@ except ImportError:  # OpenCV is optional; the pipeline falls back to PIL output
     np = None
 
 
-SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
-SUPPORTED_CONTENT_TYPES = {"image/jpeg", "image/png"}
+SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+SUPPORTED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 YOLO_INPUT_SIZE = (640, 640)
 DEFAULT_YOLO_MODEL = Path(__file__).resolve().parent / "models" / "vehicle_damage.pt"
@@ -79,7 +79,7 @@ def cv_refine_image(padded_path: Path, ai_ready_path: Path) -> bool:
 def _safe_extension(filename: str) -> str:
     extension = Path(filename).suffix.lower()
     if extension not in SUPPORTED_EXTENSIONS:
-        raise ValueError("Only JPG, JPEG, and PNG vehicle images are supported.")
+        raise ValueError("Only JPG, JPEG, PNG, and WEBP vehicle images are supported.")
     return extension
 
 
@@ -94,7 +94,12 @@ def _validate_image_bytes(content: bytes, extension: str) -> tuple[int, int]:
     except (UnidentifiedImageError, OSError, ValueError) as exc:
         raise ValueError("The uploaded file is not a readable image.") from exc
 
-    expected_formats = {".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG"}
+    expected_formats = {
+        ".png": "PNG",
+        ".jpg": "JPEG",
+        ".jpeg": "JPEG",
+        ".webp": "WEBP",
+    }
     if detected_format != expected_formats[extension]:
         raise ValueError("The file extension does not match its image content.")
     return width, height

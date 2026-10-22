@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 import analysis
+import authenticity
 import database
 import detection
 from image_pipeline import (
@@ -64,7 +65,7 @@ async def upload_vehicle_image(file: UploadFile = File(...)):
     if file.content_type not in SUPPORTED_CONTENT_TYPES:
         raise HTTPException(
             status_code=415,
-            detail="Only JPG, JPEG, and PNG vehicle images are supported.",
+            detail="Only JPG, JPEG, PNG, and WEBP vehicle images are supported.",
         )
 
     content = await file.read(MAX_FILE_SIZE_BYTES + 1)
@@ -106,6 +107,7 @@ async def upload_vehicle_image(file: UploadFile = File(...)):
             if prepared.ai_ready_path
             else None
         ),
+        "authenticity": authenticity.inspect_image(content),
         "yolo": yolo_inference_status(),
     }
 
@@ -121,6 +123,7 @@ class AnalyzeRequest(BaseModel):
 def run_analysis(request: AnalyzeRequest):
     """Full pipeline for one to eight previously uploaded images."""
     image_results = []
+    authenticity_results = []
     for upload_id in request.upload_ids[:8]:
         ai_ready = UPLOAD_ROOT / "ai_ready" / f"{upload_id}.jpg"
         processed = UPLOAD_ROOT / "processed" / f"{upload_id}.jpg"
@@ -128,14 +131,19 @@ def run_analysis(request: AnalyzeRequest):
         if not image_path.exists():
             raise HTTPException(status_code=404, detail=f"Prepared image {upload_id} not found.")
 
+        original_matches = list((UPLOAD_ROOT / "original").glob(f"{upload_id}.*"))
+        if original_matches:
+            authenticity_results.append(authenticity.inspect_image(original_matches[0]))
+
         result = detection.detect(image_path)
         result["upload_id"] = upload_id
         result["severity"] = analysis.assess_image(result["detections"])
         image_results.append(result)
 
-    # Claim-level severity: weighted blend of the worst images.
+    # Claim-level severity: a weaker secondary image must never downgrade the
+    # strongest evidence from another image. This is safer for claim triage.
     scores = sorted((r["severity"]["score"] for r in image_results), reverse=True)
-    claim_score = scores[0] if len(scores) == 1 else min(100.0, scores[0] * 0.85 + scores[1] * 0.15)
+    claim_score = scores[0]
     severity_label = analysis.classify_severity(claim_score)
     severity = {
         "score": round(claim_score, 1),
@@ -148,6 +156,8 @@ def run_analysis(request: AnalyzeRequest):
     all_detections = [d for r in image_results for d in r["detections"]]
     cost = analysis.estimate_cost(all_detections, severity_label)
     recommendations = analysis.recommend_repairs(all_detections, severity_label)
+    authenticity_results = authenticity.compare_duplicates(authenticity_results)
+    authenticity_summary = authenticity.summarize(authenticity_results)
     report = analysis.build_report(
         claim_id=request.claim_id,
         vehicle=request.vehicle,
@@ -157,6 +167,7 @@ def run_analysis(request: AnalyzeRequest):
         cost=cost,
         recommendations=recommendations,
     )
+    report["image_authenticity"] = authenticity_summary
     report["analysis_row_id"] = database.save_analysis(request.claim_id, report)
     return {"status": "completed", "model": model_status(), "report": report}
 

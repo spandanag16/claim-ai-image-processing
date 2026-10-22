@@ -7,7 +7,10 @@ function AccidentDetails() {
   const navigate = useNavigate();
   const [accident, setAccident] = useState(() => {
     const saved = JSON.parse(localStorage.getItem("claimData")) || {};
-    return saved.accident || { date: "", time: "", location: "", type: "", description: "" };
+    return saved.accident || {
+      date: "", time: "", location: "", type: "", other_vehicle: "",
+      vehicle_drivable: "", description: "",
+    };
   });
   const [error, setError] = useState("");
 
@@ -15,8 +18,8 @@ function AccidentDetails() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (!accident.date || !accident.time || !accident.location || !accident.type) {
-      setError("Please provide accident date, time, location and type.");
+    if (!accident.date || !accident.time || !accident.location || !accident.type || !accident.other_vehicle || !accident.vehicle_drivable) {
+      setError("Please provide all accident details, including vehicle involvement and drivability.");
       return;
     }
     const existing = JSON.parse(localStorage.getItem("claimData")) || {};
@@ -52,6 +55,24 @@ function AccidentDetails() {
             <select id="type" value={accident.type} onChange={update("type")}>
               <option value="">Select type</option>
               {ACCIDENT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="other_vehicle">Another Vehicle Involved?</label>
+            <select id="other_vehicle" value={accident.other_vehicle} onChange={update("other_vehicle")}>
+              <option value="">Select an option</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+              <option value="Unknown">Unknown</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="vehicle_drivable">Is the Vehicle Drivable?</label>
+            <select id="vehicle_drivable" value={accident.vehicle_drivable} onChange={update("vehicle_drivable")}>
+              <option value="">Select an option</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+              <option value="Partially">Partially</option>
             </select>
           </div>
           <div className="form-group full-width">

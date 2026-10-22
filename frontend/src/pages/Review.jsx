@@ -31,6 +31,19 @@ function Review() {
     }
   };
 
+  const downloadReport = () => {
+    if (!report) return;
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${report.claim_id || "claim"}-assessment-report.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="claim-page">
       <header className="claim-header">
@@ -74,6 +87,12 @@ function Review() {
 
         {report && (
           <div className="report-wrapper">
+            <div className="review-status-card">
+              <strong>Claim assessment report ready</strong>
+              <button type="button" className="primary-btn" onClick={downloadReport}>
+                Download JSON Report <span>↓</span>
+              </button>
+            </div>
             <div className={`severity-banner severity-${report.severity.severity.toLowerCase()}`}>
               <div>
                 <span className="severity-label">{report.severity.severity}</span>
@@ -143,6 +162,18 @@ function Review() {
               <strong>Model transparency</strong>
               <p>Engine: {report.model_transparency.engines_used.join(", ")}{model ? ` — ${model.message}` : ""}. {report.model_transparency.note}</p>
             </div>
+            {report.image_authenticity && (
+              <div className={`review-note authenticity-${report.image_authenticity.status}`}>
+                <strong>Image authenticity screening: {report.image_authenticity.status.replaceAll("_", " ")}</strong>
+                <p>Risk score: {report.image_authenticity.risk_score} / 100. {report.image_authenticity.recommendation}</p>
+                <small>{report.image_authenticity.note}</small>
+                {report.image_authenticity.images.some((image) => image.flags.length > 0) && (
+                  <ul>
+                    {report.image_authenticity.images.flatMap((image) => image.flags).map((flag) => <li key={flag}>{flag}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         )}
       </main>
