@@ -137,7 +137,10 @@ def run_analysis(request: AnalyzeRequest):
 
         result = detection.detect(image_path)
         result["upload_id"] = upload_id
-        result["severity"] = analysis.assess_image(result["detections"])
+        original_filename = original_matches[0].name if original_matches else None
+        result["severity"] = analysis.assess_image(
+            result["detections"], original_filename=original_filename
+        )
         image_results.append(result)
 
     # Claim-level severity: a weaker secondary image must never downgrade the

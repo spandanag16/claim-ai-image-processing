@@ -180,6 +180,36 @@ def test_structural_damage_is_not_downgraded_by_low_confidence_or_small_area():
     assert result["severity"] == "Severe"
 
 
+def test_multi_signal_scoring_escalates_multiple_critical_regions():
+    import analysis
+
+    result = analysis.assess_image([
+        {"part": "Bumper", "damage_type": "Broken Component", "area_ratio": 0.10, "confidence": 0.80},
+        {"part": "Headlight", "damage_type": "Crack", "area_ratio": 0.06, "confidence": 0.75},
+    ])
+
+    assert result["scoring_method"] == "multi_signal_heuristic"
+    assert result["severity"] == "Severe"
+
+
+def test_demo_fixture_labels_are_opt_in(monkeypatch):
+    import analysis
+
+    normal = analysis.assess_image([], original_filename="minor-vehicle-damage-test.jpg")
+    assert normal["scoring_method"] == "multi_signal_heuristic"
+
+    monkeypatch.setenv("CLAIMAI_DEMO_MODE", "true")
+    expected = {
+        "minor-vehicle-damage-test.jpg": "Minor",
+        "moderate-vehicle-damage-test.jpg": "Moderate",
+        "severe-vehicle-damage-test.jpg": "Severe",
+    }
+    for filename, label in expected.items():
+        result = analysis.assess_image([], original_filename=filename)
+        assert result["severity"] == label
+        assert result["scoring_method"] == "demo_fixture_override"
+
+
 def test_authenticity_screen_flags_editing_metadata_and_duplicates():
     import authenticity
 

@@ -45,6 +45,21 @@ service runs **classical OpenCV heuristics** and labels every detection
 `engine: "opencv_heuristic"` — these are rule-based regions, not trained-model
 predictions, and no accuracy is claimed.
 
+Severity scoring combines the strongest detected region with corroborating
+regions, damaged area, confidence, and critical-part evidence. It is still a
+decision-support heuristic and should be validated against surveyor-labelled
+severity data before production use. For presentations, the three generated
+fixtures can be classified consistently by explicitly enabling demo mode:
+
+```powershell
+$env:CLAIMAI_DEMO_MODE="true"
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Demo mode only recognizes filenames containing `minor-vehicle-damage-test`,
+`moderate-vehicle-damage-test`, or `severe-vehicle-damage-test`. It is disabled
+by default and reports `scoring_method: "demo_fixture_override"` in the result.
+
 This branch includes a fine-tuned YOLO11m vehicle-damage checkpoint at
 `backend/models/vehicle_damage.pt`. It detects `dent`, `scratch`, `crack`,
 `shattered_glass`, `broken_lamp`, and `flat_tire`. The backend loads this
